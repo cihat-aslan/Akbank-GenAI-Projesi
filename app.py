@@ -4,26 +4,19 @@ import streamlit as st
 from dotenv import load_dotenv
 
 # ---- BASİT İMPORTLAR ----
-from langchain.prompts import PromptTemplate
 from langchain_community.vectorstores import FAISS
 from langchain_community.document_loaders import TextLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.chains import LLMChain
 from langchain_community.embeddings import HuggingFaceEmbeddings
 
 # --- .env dosyasındaki API anahtarını yükle ---
 load_dotenv()
 
-# --- AKILLI HTML TEMİZLEME ---
+# --- HTML TAG TEMİZLEME FONKSİYONU ---
 def clean_html_tags(text):
-    """Sadece gerçek HTML tag'lerini temizle"""
-    # Eğer çok fazla HTML tag'i yoksa, orijinal metni koru
-    html_tag_count = len(re.findall(r'<[^>]+>', text))
-    if html_tag_count < 3:  # Çok az HTML tag varsa temizleme
-        return text
-    
-    # Çok fazla HTML tag varsa temizle
+    """HTML tag'lerini temizle"""
     clean_text = re.sub(r'<[^>]+>', '', text)
+    clean_text = re.sub(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', '', clean_text)
     clean_text = re.sub(r'\s+', ' ', clean_text)
     return clean_text.strip()
 
@@ -32,11 +25,6 @@ def get_text_chunks(text_file):
     try:
         loader = TextLoader(text_file, encoding="utf-8")
         documents = loader.load()
-        
-        # HTML tag'lerini temizle
-        for doc in documents:
-            doc.page_content = clean_html_tags(doc.page_content)
-            
         splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         chunks = splitter.split_documents(documents)
         return chunks
@@ -57,50 +45,50 @@ def get_vector_store(text_chunks):
         st.error(f"Vektör deposu oluşturma hatası: {str(e)}")
         return None
 
-# --- 3. TEMİZ YANIT SİSTEMİ ---
+# --- 3. BASİT YANIT SİSTEMİ ---
 def generate_response(context, question):
     """
-    LLM olmadan temiz bir yanıt oluşturucu
+    LLM olmadan basit bir yanıt oluşturucu - DÜZELTİLMİŞ VERSİYON
     """
-    # Context'i temizle
-    clean_context = clean_html_tags(context)
-    
-    # Başlık ve badge'leri atla, anlamlı içeriği bul
-    lines = clean_context.split('\n')
-    meaningful_lines = []
-    
-    for line in lines:
-        line = line.strip()
-        # Anlamsız satırları atla
-        if len(line) < 10 or line.startswith('http') or 'badge' in line.lower():
-            continue
-        if len(line.split()) > 3:  # En az 3 kelime içeren satırlar
-            meaningful_lines.append(line)
-    
-    meaningful_text = ' '.join(meaningful_lines[:5])  # İlk 5 anlamlı satır
-    
-    if not meaningful_text:
-        meaningful_text = clean_context[:500]  # Fallback
-    
-    question_lower = question.lower()
-    
-    if "nedir" in question_lower or "ne demek" in question_lower:
-        return f"{meaningful_text[:400]}... [Devamı için detaylı sonuçlara bakın]"
-    
-    elif "nasıl" in question_lower or "yapılır" in question_lower or "kurulur" in question_lower:
-        return f"{meaningful_text[:450]}... [Adımlar için detaylı sonuçları inceleyin]"
-    
-    elif "ne işe yarar" in question_lower or "kullanım" in question_lower:
-        return f"{meaningful_text[:400]}... [Kullanım detayları için yukarıdaki sonuçlara bakın]"
-    
-    elif "bileşen" in question_lower or "component" in question_lower:
-        return f"{meaningful_text[:380]}... [Bileşen listesi için detaylı sonuçları görün]"
-    
-    elif "rag" in question_lower:
-        return f"{meaningful_text[:350]}... [RAG mimarisi detayları için sonuçlara bakın]"
-    
-    else:
-        return f"{meaningful_text[:500]}... [Detaylı bilgi için yukarıdaki sonuçları okuyun]"
+    try:
+        # Context'i temizle
+        clean_context = clean_html_tags(context)
+        
+        # Anlamlı içeriği bul
+        lines = clean_context.split('\n')
+        meaningful_lines = []
+        
+        for line in lines:
+            line = line.strip()
+            if len(line) > 20 and not line.startswith('http') and 'badge' not in line.lower():
+                meaningful_lines.append(line)
+        
+        # Yeterli içerik yoksa tüm context'i kullan
+        if len(meaningful_lines) < 2:
+            meaningful_text = clean_context[:500]
+        else:
+            meaningful_text = ' '.join(meaningful_lines[:5])
+        
+        # Soruya göre özelleştirilmiş yanıt
+        question_lower = question.lower()
+        
+        if "türkçe" in question_lower or "turkce" in question_lower:
+            return "LangChain için Türkçe kaynaklar şu anda sınırlıdır. En güncel bilgiler için resmi İngilizce dokümantasyonu takip etmenizi öneririm. Yukarıdaki sonuçlarda LangChain'in genel özelliklerini bulabilirsiniz."
+        
+        elif "nedir" in question_lower:
+            return f"LangChain: {meaningful_text[:300]}... [Detaylar için yukarıdaki sonuçlara bakın]"
+        
+        elif "nasıl" in question_lower or "kurul" in question_lower:
+            return f"Kurulum: {meaningful_text[:400]}... [Adımlar için detaylı sonuçları inceleyin]"
+        
+        elif "ne işe yarar" in question_lower:
+            return f"Kullanım: {meaningful_text[:350]}... [Kullanım alanları için sonuçlara bakın]"
+        
+        else:
+            return f"{meaningful_text[:500]}... [Detaylı bilgi için yukarıdaki sonuçları okuyun]"
+            
+    except Exception as e:
+        return f"Özet: {clean_html_tags(context)[:400]}... [Detaylar için aşağıdaki sonuçlara bakın]"
 
 # --- 4. Kullanıcı Sorusunu Yanıtlama ---
 def user_input(user_question):
@@ -118,29 +106,29 @@ def user_input(user_question):
         
         st.success(f"✅ '{user_question}' sorusu için {len(docs)} sonuç bulundu:")
         
-        # Tüm dokümanları birleştir ve temizle
+        # Tüm dokümanları birleştir
         all_context = "\n".join([doc.page_content for doc in docs])
         
-        # Temiz yanıt oluştur
+        # Yanıt oluştur
         with st.spinner("Yanıt oluşturuluyor..."):
             response = generate_response(all_context, user_question)
             
             st.info("💡 **Yanıt:**")
             st.write(response)
         
-        # Detaylı ve TEMİZ sonuçlar
+        # Detaylı sonuçlar
         st.divider()
         st.subheader("📄 Detaylı Sonuçlar")
         
         for i, doc in enumerate(docs):
             clean_content = clean_html_tags(doc.page_content)
-            # Çok kısa içerikleri filtrele
             if len(clean_content) > 50:
                 with st.expander(f"📖 Sonuç {i+1}"):
                     st.write(clean_content)
         
     except Exception as e:
         st.error(f"Hata: {str(e)}")
+        st.info("Lütfen sayfayı yenileyip tekrar deneyin.")
 
 # --- STREAMLIT ARAYÜZÜ ---
 st.set_page_config(
@@ -234,8 +222,3 @@ with col2:
 # Footer
 st.divider()
 st.caption("Akbank GenAI Bootcamp - RAG Chatbot | Temizlenmiş İçerik")
-
-# Debug
-with st.expander("🔧 Sistem Durumu"):
-    st.write(f"FAISS Index: {'✅ Var' if os.path.exists('faiss_index') else '❌ Yok'}")
-    st.write(f"Data.txt: {'✅ Var' if os.path.exists('data.txt') else '❌ Yok'}")
