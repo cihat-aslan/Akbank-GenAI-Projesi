@@ -28,7 +28,7 @@ LangChain dokümantasyonu üzerinde RAG (Retrieval Augmented Generation) tabanl�
 - Temiz ve kullanıcı-dostu arayüz
 
 ## 🚀 Demo
-[Streamlit App Linki Buraya]
+[[Streamlit App Linki Buraya](https://akbank-genai-projesi.streamlit.app/)]
 
 ## 🔧 Kurulum
 ```bash
