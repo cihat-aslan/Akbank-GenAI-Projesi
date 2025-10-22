@@ -30,6 +30,17 @@ LangChain dokümantasyonu üzerinde RAG (Retrieval Augmented Generation) tabanl�
 ## 🚀 Demo
 [[Streamlit App Linki](https://akbank-genai-projesi.streamlit.app/)]
 
+### Ekran Görüntüleri
+
+#### 1. Ana Arayüz ve Örnek Sorular
+![Ana Arayüz](1.png)
+*Kullanıcı arayüzü ve hızlı erişim için örnek soru butonları*
+
+#### 2. Soru-Cevap Örneği
+![Soru-Cevap](2.png)
+*"LangChain nedir?" sorusuna verilen detaylı yanıt ve ilgili içerikler*
+
+
 ## 🔧 Kurulum
 ```bash
 git clone [repo-link]
